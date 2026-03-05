@@ -1,0 +1,39 @@
+name: Daily Tieba Sign-In
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 22 * * *'  # 北京时间 6:30 (UTC+8)
+
+jobs:
+  signin:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Rebuild source tree (compat)
+        run: |
+          mkdir -p src/main/java/top/srcrs/util
+          mkdir -p src/main/java/top/srcrs/domain
+          [ -f Run.java ] && cp -f Run.java src/main/java/top/srcrs/Run.java || true
+          [ -f Request.java ] && cp -f Request.java src/main/java/top/srcrs/util/Request.java || true
+          [ -f Encryption.java ] && cp -f Encryption.java src/main/java/top/srcrs/util/Encryption.java || true
+          [ -f Cookie.java ] && cp -f Cookie.java src/main/java/top/srcrs/domain/Cookie.java || true
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+          cache: 'maven'
+
+      - name: Build and execute
+        env:
+          BDUSS: ${{ secrets.BDUSS }}
+          SCKEY: ${{ secrets.SCKEY }}
+        run: |
+          mvn -B compile exec:java \
+            -Dexec.mainClass="top.srcrs.Run" \
+            -Dexec.args="$BDUSS $SCKEY"
